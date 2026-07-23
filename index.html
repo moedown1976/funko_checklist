@@ -527,14 +527,16 @@
   document.addEventListener('DOMContentLoaded', () => {
     // 1. YOUR FIREBASE CONFIG (Make sure to swap these with your actual Firebase credentials)
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+      const firebaseConfig = {
+    apiKey: "AIzaSyA1jolij0e6hYtU2GlthRr_OR-D9pUhCo8",
+    authDomain: "wwe-funko-checklist.firebaseapp.com",
+    databaseURL: "https://wwe-funko-checklist-default-rtdb.firebaseio.com",
+    projectId: "wwe-funko-checklist",
+    storageBucket: "wwe-funko-checklist.firebasestorage.app",
+    messagingSenderId: "146854470840",
+    appId: "1:146854470840:web:4db14de5ecc7dd6719004d"
+  };
+
 
     // 2. Initialize Firebase
     if (!firebase.apps.length) {
