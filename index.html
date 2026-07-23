@@ -520,7 +520,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // 1. YOUR FIREBASE CONFIG (Paste your exact keys from Step 1 here)
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyA1jolij0e6hYtU2GlthRr_OR-D9pUhCo8",
     authDomain: "wwe-funko-checklist.firebaseapp.com",
@@ -529,42 +530,45 @@
     storageBucket: "wwe-funko-checklist.firebasestorage.app",
     messagingSenderId: "146854470840",
     appId: "1:146854470840:web:4db14de5ecc7dd6719004d"
+"
   };
 
-  // 2. Initialize Firebase
+  // 2. Initialize
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const checklistRef = db.ref('checklist_progress');
 
-  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-
-  // 3. Listen for live updates from Firebase (Syncs ALL connected devices instantly)
-  checklistRef.on('value', (snapshot) => {
-    const data = snapshot.val() || {};
-    checkboxes.forEach(cb => {
-      // Set checked state based on cloud data (default to false if not saved yet)
-      cb.checked = !!data[cb.id];
-    });
-    updateCounter();
-  });
-
-  // 4. Save to Firebase whenever any checkbox state changes
-  checkboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-      // Update just this specific item in the database
-      db.ref('checklist_progress/' + cb.id).set(cb.checked);
-      updateCounter();
-    });
-  });
-
-  // 5. Dynamic Counter Update Function
+  // Helper to recalculate totals
   function updateCounter() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
     const total = checkboxes.length;
     const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
-    const counterEl = document.getElementById('counter'); // Make sure your counter element has id="counter"
+    
+    const counterEl = document.getElementById('trackerCount');
     if (counterEl) {
       counterEl.textContent = `${checked} / ${total}`;
     }
   }
+
+  // 3. Sync from Firebase Database
+  checklistRef.on('value', (snapshot) => {
+    const data = snapshot.val() || {};
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    
+    checkboxes.forEach(cb => {
+      cb.checked = !!data[cb.id];
+    });
+    
+    updateCounter();
+  });
+
+  // 4. Save updates on click
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      db.ref('checklist_progress/' + e.target.id).set(e.target.checked);
+      updateCounter();
+    }
+  });
+});
 </script></body>
 </html>
