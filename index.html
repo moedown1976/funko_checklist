@@ -515,60 +515,86 @@
     </table>
 </div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<div class="item"><label><input type="checkbox" id="pop-150"><span class="pop-num">#150</span><span class="pop-name">Edge</span><span class="pop-variant">(Championship)</span></label></div>
+    </div> <!-- Closes checklist-grid -->
+</div> <!-- Closes container -->
+
+<!-- Firebase SDK Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyA1jolij0e6hYtU2GlthRr_OR-D9pUhCo8",
-    authDomain: "wwe-funko-checklist.firebaseapp.com",
-    databaseURL: "https://wwe-funko-checklist-default-rtdb.firebaseio.com",
-    projectId: "wwe-funko-checklist",
-    storageBucket: "wwe-funko-checklist.firebasestorage.app",
-    messagingSenderId: "146854470840",
-    appId: "1:146854470840:web:4db14de5ecc7dd6719004d"
-"
-  };
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. YOUR FIREBASE CONFIG (Make sure to swap these with your actual Firebase credentials)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-  // 2. Initialize
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const checklistRef = db.ref('checklist_progress');
+    // 2. Initialize Firebase
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+    const checklistRef = db.ref('checklist_progress');
 
-  // Helper to recalculate totals
-  function updateCounter() {
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    const total = checkboxes.length;
-    const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
-    
-    const counterEl = document.getElementById('trackerCount');
-    if (counterEl) {
-      counterEl.textContent = `${checked} / ${total}`;
+    // 3. Counter Function matching id="trackerCount"
+    function updateCounter() {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      const total = checkboxes.length;
+      const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
+      
+      const counterEl = document.getElementById('trackerCount');
+      if (counterEl) {
+        counterEl.textContent = `${checked} / ${total}`;
+      }
+    }
+
+    // Run initial count
+    updateCounter();
+
+    // 4. Sync from Firebase Database
+    checklistRef.on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      
+      checkboxes.forEach(cb => {
+        cb.checked = !!data[cb.id];
+      });
+      
+      updateCounter();
+    });
+
+    // 5. Save updates on click
+    document.addEventListener('change', (e) => {
+      if (e.target.matches('input[type="checkbox"]')) {
+        db.ref('checklist_progress/' + e.target.id).set(e.target.checked);
+        updateCounter();
+      }
+    });
+  });
+
+  // 6. Global Reset Button Handler
+  function resetAll() {
+    if (confirm("Are you sure you want to reset all progress?")) {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = false);
+      
+      if (typeof firebase !== 'undefined') {
+        firebase.database().ref('checklist_progress').remove();
+      }
+      
+      const counterEl = document.getElementById('trackerCount');
+      if (counterEl) {
+        counterEl.textContent = `0 / ${checkboxes.length}`;
+      }
     }
   }
-
-  // 3. Sync from Firebase Database
-  checklistRef.on('value', (snapshot) => {
-    const data = snapshot.val() || {};
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    
-    checkboxes.forEach(cb => {
-      cb.checked = !!data[cb.id];
-    });
-    
-    updateCounter();
-  });
-
-  // 4. Save updates on click
-  document.addEventListener('change', (e) => {
-    if (e.target.matches('input[type="checkbox"]')) {
-      db.ref('checklist_progress/' + e.target.id).set(e.target.checked);
-      updateCounter();
-    }
-  });
-});
-</script></body>
+</script>
+</body>
 </html>
