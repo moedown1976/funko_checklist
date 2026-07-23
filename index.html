@@ -524,9 +524,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // 1. YOUR FIREBASE CONFIG (Make sure to swap these with your actual Firebase credentials)
-    const firebaseConfig = {
+  const firebaseConfig = {
       const firebaseConfig = {
     apiKey: "AIzaSyA1jolij0e6hYtU2GlthRr_OR-D9pUhCo8",
     authDomain: "wwe-funko-checklist.firebaseapp.com",
@@ -537,60 +535,91 @@
     appId: "1:146854470840:web:4db14de5ecc7dd6719004d"
   };
 
-
-    // 2. Initialize Firebase
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Firebase safely
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.database();
     const checklistRef = db.ref('checklist_progress');
 
-    // 3. Counter Function matching id="trackerCount"
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const counterEl = document.getElementById('trackerCount');
+
+    // Helper: Recalculate and update the counter in the banner
     function updateCounter() {
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
       const total = checkboxes.length;
       const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
-      
-      const counterEl = document.getElementById('trackerCount');
       if (counterEl) {
         counterEl.textContent = `${checked} / ${total}`;
       }
     }
 
-    // Run initial count
+    // Step A: First load local checks so you never lose progress offline/on load
+    checkboxes.forEach(cb => {
+      if (localStorage.getItem(cb.id) === 'true') {
+        cb.checked = true;
+      }
+    });
     updateCounter();
 
-    // 4. Sync from Firebase Database
+    // Step B: Listen for real-time updates from Firebase across devices
     checklistRef.on('value', (snapshot) => {
-      const data = snapshot.val() || {};
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      
-      checkboxes.forEach(cb => {
-        cb.checked = !!data[cb.id];
-      });
+      const cloudData = snapshot.val();
+
+      // IF cloud data exists, update local checkboxes and local backup
+      if (cloudData) {
+        checkboxes.forEach(cb => {
+          if (cloudData.hasOwnProperty(cb.id)) {
+            cb.checked = !!cloudData[cb.id];
+            localStorage.setItem(cb.id, cb.checked);
+          }
+        });
+      } else {
+        // IF cloud is empty, upload whatever is currently checked locally so cloud gets populated
+        const initialData = {};
+        checkboxes.forEach(cb => {
+          if (cb.checked) {
+            initialData[cb.id] = true;
+          }
+        });
+        if (Object.keys(initialData).length > 0) {
+          checklistRef.update(initialData);
+        }
+      }
       
       updateCounter();
     });
 
-    // 5. Save updates on click
+    // Step C: Save changes to both Firebase and LocalStorage when a box is clicked
     document.addEventListener('change', (e) => {
       if (e.target.matches('input[type="checkbox"]')) {
-        db.ref('checklist_progress/' + e.target.id).set(e.target.checked);
+        const cb = e.target;
+        
+        // Save locally
+        localStorage.setItem(cb.id, cb.checked);
+        
+        // Push to Firebase cloud
+        checklistRef.child(cb.id).set(cb.checked);
+        
         updateCounter();
       }
     });
   });
 
-  // 6. Global Reset Button Handler
+  // Safe Reset Function
   function resetAll() {
-    if (confirm("Are you sure you want to reset all progress?")) {
+    if (confirm("Are you sure you want to reset all progress across all devices?")) {
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(cb => cb.checked = false);
-      
-      if (typeof firebase !== 'undefined') {
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        localStorage.removeItem(cb.id);
+      });
+
+      if (typeof firebase !== 'undefined' && firebase.apps.length) {
         firebase.database().ref('checklist_progress').remove();
       }
-      
+
       const counterEl = document.getElementById('trackerCount');
       if (counterEl) {
         counterEl.textContent = `0 / ${checkboxes.length}`;
