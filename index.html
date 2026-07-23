@@ -535,7 +535,7 @@
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Firebase safely
+    // 1. Initialize Firebase
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
@@ -545,7 +545,7 @@
     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
     const counterEl = document.getElementById('trackerCount');
 
-    // Helper: Recalculate and update the counter in the banner
+    // Helper: Recalculate counter
     function updateCounter() {
       const total = checkboxes.length;
       const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
@@ -554,7 +554,7 @@
       }
     }
 
-    // Step A: First load local checks so you never lose progress offline/on load
+    // Step A: Load local cache immediately so UI renders instantly
     checkboxes.forEach(cb => {
       if (localStorage.getItem(cb.id) === 'true') {
         cb.checked = true;
@@ -562,51 +562,39 @@
     });
     updateCounter();
 
-    // Step B: Listen for real-time updates from Firebase across devices
+    // Step B: Real-time sync with cloud
     checklistRef.on('value', (snapshot) => {
-      const cloudData = snapshot.val();
+      const cloudData = snapshot.val() || {};
 
-      // IF cloud data exists, update local checkboxes and local backup
-      if (cloudData) {
-        checkboxes.forEach(cb => {
-          if (cloudData.hasOwnProperty(cb.id)) {
-            cb.checked = !!cloudData[cb.id];
-            localStorage.setItem(cb.id, cb.checked);
-          }
-        });
-      } else {
-        // IF cloud is empty, upload whatever is currently checked locally so cloud gets populated
-        const initialData = {};
-        checkboxes.forEach(cb => {
-          if (cb.checked) {
-            initialData[cb.id] = true;
-          }
-        });
-        if (Object.keys(initialData).length > 0) {
-          checklistRef.update(initialData);
-        }
-      }
-      
+      checkboxes.forEach(cb => {
+        // Look up state in Firebase (defaults to false if key is omitted)
+        const isChecked = !!cloudData[cb.id];
+        
+        cb.checked = isChecked;
+        localStorage.setItem(cb.id, isChecked);
+      });
+
       updateCounter();
+    }, (error) => {
+      console.error("Firebase Sync Error (Check Database Rules):", error);
     });
 
-    // Step C: Save changes to both Firebase and LocalStorage when a box is clicked
+    // Step C: Instant UI update on click + push to cloud
     document.addEventListener('change', (e) => {
       if (e.target.matches('input[type="checkbox"]')) {
         const cb = e.target;
-        
-        // Save locally
+
+        // Immediate local response
         localStorage.setItem(cb.id, cb.checked);
-        
-        // Push to Firebase cloud
-        checklistRef.child(cb.id).set(cb.checked);
-        
         updateCounter();
+
+        // Push to Firebase (sets true/false cleanly)
+        checklistRef.child(cb.id).set(cb.checked);
       }
     });
   });
 
-  // Safe Reset Function
+  // Reset Function
   function resetAll() {
     if (confirm("Are you sure you want to reset all progress across all devices?")) {
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
